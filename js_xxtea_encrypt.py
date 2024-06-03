@@ -55,9 +55,15 @@ def decrypt_file(file_path, xxtea_key, xxtea_encrypt):
         key_len = len(key)
         ret_len = ctypes.c_ulong()
         print("\033[93m %s \033[0m" % ("Decrypting "+file_path), end="\n")
+        #sttrox: not using compress
+        #compressed_data = zlib.compress(data, zlib.Z_DEFAULT_COMPRESSION)
+        #compressed_data_len = len(compressed_data)
         result = xxtea_encrypt(data, data_len, key, key_len, ctypes.byref(ret_len))
-        #print(ret_len.value)
+        print(ret_len.value)
         decrypted_data = ctypes.string_at(result, ret_len.value)
+        write_file(file_path.replace('.js','.jsc'),decrypted_data)
+        print("done %s" % file_path.replace('.js','.jsc'))
+        return
         if ret_len.value > 0:
             if decrypted_data[:2] == b"PK":
                 fio = BytesIO(decrypted_data)

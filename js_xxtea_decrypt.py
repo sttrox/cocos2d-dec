@@ -1,7 +1,7 @@
 import ctypes, argparse, os, gzip, jsbeautifier, zlib, binascii
 from ctypes import c_char_p, c_ulong
 from io import BytesIO
-import zipfile 
+import zipfile
 
 def beautify_js(data):
     options = jsbeautifier.default_options()
@@ -56,18 +56,21 @@ def decrypt_file(file_path, xxtea_key, xxtea_decrypt):
         ret_len = ctypes.c_ulong()
         print("\033[93m %s \033[0m" % ("Decrypting "+file_path), end="\n")
         result = xxtea_decrypt(data, data_len, key, key_len, ctypes.byref(ret_len))
-        #print(ret_len.value)
+        print(ret_len.value)
         decrypted_data = ctypes.string_at(result, ret_len.value)
         if ret_len.value > 0:
             if decrypted_data[:2] == b"PK":
+                print("PK")
                 fio = BytesIO(decrypted_data)
                 fzip = zipfile.ZipFile(file=fio)
                 decrypted_data = fzip.read(fzip.namelist()[0])
                 write_file(file_path.replace('.jsc','.js'), decrypted_data)
             elif decrypted_data[:2] == b"\x1f\x8b":
+                print("zlib")
                 write_file(file_path.replace('.jsc','.js'), zlib.decompress(decrypted_data, 16 + zlib.MAX_WBITS))
             else:
                 try:
+                    print("without")
                     write_file(file_path.replace('.jsc','.js'), decrypted_data)
                 except UnicodeDecodeError:
                     print("\033[1;31m %s \033[0m" % ("Wrong key maybe ?? "+file_path), end="\n")
@@ -98,11 +101,11 @@ def main():
     parser.add_argument("-bs", '--beautify', action="store_true", required=False, help="Enables beautifying!")
 
     args = parser.parse_args()
-    my_lib = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)),'lib/libext_xxtea.dylib')) 
+    my_lib = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)),'lib/libext_xxtea.dylib'))
     xxtea_decrypt = my_lib.xxtea_decrypt
     xxtea_decrypt.argtypes = [c_char_p, c_ulong, c_char_p, c_ulong, ctypes.POINTER(c_ulong)]
     xxtea_decrypt.restype = ctypes.POINTER(ctypes.c_ubyte)
-    
+
     decrypt_folder(args.path, args.key.encode(), xxtea_decrypt)
 
 if __name__ == '__main__':
